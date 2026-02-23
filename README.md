@@ -58,10 +58,14 @@ A preset is a JSON object with keys matching `make-video.ps1` parameters.
 - `IconFile` (string) — set to `""` to disable icon overlay
 
 Notes:
-- If a preset contains **relative paths**, they are resolved under:
-  - `Data/In` for `InFile`, `Subs`, `FontFile`, `IconFile`
-  - `Data/Out` for `OutFile`
+- If a preset contains **relative paths**, they are resolved under the current working directory.
+  - When using `run-preset.ps1`, the working directory is set to the script folder.
+- If you want to keep assets under `Data/In` and outputs under `Data/Out`, specify them explicitly in your preset, e.g.:
+  - `"InFile": "Data/In/big_video.avi"`
+  - `"Subs": "Data/In/subs.ass"`
+  - `"OutFile": "Data/Out/clip.mp4"`
 - In JSON on Windows, prefer using forward slashes in paths (e.g. `C:/Windows/Fonts/arialbd.ttf`) to avoid escaping backslashes.
+
 
 ## Project files
 
