@@ -1,7 +1,7 @@
 {
-  "InFile": "big_video.mp4",
+  "InFile": "3rd.avi",
   "OutFile": "tiktok_clip.mp4",
-  "T1": "00:00:05.000",
-  "T2": "00:00:20.000",
+  "T1": "00:15:29.000",
+  "T2": "00:15:39.000",
   "Title": "TEST"
 }

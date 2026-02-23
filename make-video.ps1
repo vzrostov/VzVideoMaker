@@ -43,7 +43,18 @@ param(
   [int]$TitleSize = 64,
 
   [Parameter()]
-  [string]$SubForceStyle = "Alignment=2,Fontsize=52,Outline=3,Shadow=0,MarginV=70"
+  [string]$SubForceStyle = "Alignment=2,Fontsize=52,Outline=3,Shadow=0,MarginV=70",
+
+  # Data directories (relative to the script directory by default)
+  [Parameter()]
+  [string]$DataInDir = "Data\\In",
+
+  [Parameter()]
+  [string]$DataOutDir = "Data\\Out",
+
+  # Icon file name/path (resolved under Data\In if relative)
+  [Parameter()]
+  [string]$IconFile = "icon.gif"
 )
 
 Set-StrictMode -Version Latest
@@ -51,10 +62,20 @@ $ErrorActionPreference = "Stop"
 
 # ===================== SETTINGS (edit here) =====================
 
+# Data directories
+$DataInDirResolved = if ([System.IO.Path]::IsPathRooted($DataInDir)) { $DataInDir } else { (Join-Path $PSScriptRoot $DataInDir) }
+$DataOutDirResolved = if ([System.IO.Path]::IsPathRooted($DataOutDir)) { $DataOutDir } else { (Join-Path $PSScriptRoot $DataOutDir) }
+
+function Resolve-UnderDir([string]$path, [string]$baseDir) {
+  if ([string]::IsNullOrWhiteSpace($path)) { return $path }
+  if ([System.IO.Path]::IsPathRooted($path)) { return $path }
+  return (Join-Path $baseDir $path)
+}
+
 # Paths
 $FFMPEG = "ffmpeg"                 # or "C:\ffmpeg\bin\ffmpeg.exe"
-$INPUT  = $InFile
-$OUT    = $OutFile
+$INPUT  = Resolve-UnderDir $InFile $DataInDirResolved
+$OUT    = Resolve-UnderDir $OutFile $DataOutDirResolved
 
 # Trim
 # (passed via parameters $T1/$T2)
@@ -74,15 +95,15 @@ $SRC_CROP_R = $SrcCropR
 # Title
 $TITLE        = $Title
 $TOP_BAR_H    = $TopBarH
-$FONTFILE     = $FontFile
+$FONTFILE     = Resolve-UnderDir $FontFile $DataInDirResolved
 $TITLE_SIZE   = $TitleSize
 
 # Subtitles (.ass recommended, .srt ok)
-$SUBS = $Subs
+$SUBS = Resolve-UnderDir $Subs $DataInDirResolved
 $SUB_FORCE_STYLE = $SubForceStyle
 
 # Icon (GIF with transparency)
-$ICON        = "icon.gif"
+$ICON        = Resolve-UnderDir $IconFile $DataInDirResolved
 $ICON_W      = 240
 $ICON_MARGIN = 40
 $ICON_DUR    = 2.0      # show during the last N seconds
@@ -109,43 +130,65 @@ function Escape-ForFfmpegText([string]$s) {
 
 function Escape-ForFfmpegPath([string]$p) {
   # In filtergraph it's safer to use / instead of \
-  return ($p -replace "\\", "/")
+  # Also escape the drive letter colon (C:) as C\: because ':' separates options in ffmpeg filter args.
+  $p = ($p -replace "\\", "/")
+  # Escape the drive letter colon (C:) as C\: because ':' separates options in ffmpeg filter args.
+  # We want exactly ONE backslash in the final string: C\:/Windows/Fonts/...
+  $p = ($p -replace '^([A-Za-z]):', '$1\:')
+  return $p
 }
 
 $TitleEsc = Escape-ForFfmpegText $TITLE
 $FontEsc  = Escape-ForFfmpegPath $FONTFILE
 $IconEsc  = $ICON  # can be passed to -i as-is
+$HasIcon = (-not [string]::IsNullOrWhiteSpace($ICON)) -and (Test-Path -LiteralPath $ICON)
 
 $HasSubs = (-not [string]::IsNullOrWhiteSpace($SUBS)) -and (Test-Path -LiteralPath $SUBS)
 if ($HasSubs) {
   $SubsEsc = Escape-ForFfmpegPath $SUBS
-  $SubsFilter = "[vtitle]subtitles='$SubsEsc:force_style=$SUB_FORCE_STYLE'[vsub];"
+  $SubsFilter = "[vtitle]subtitles='${SubsEsc}:force_style=${SUB_FORCE_STYLE}'[vsub];"
 } else {
   $SubsFilter = "[vtitle]null[vsub];"
 }
 
+if ($HasIcon) {
+  $IconFilter = @"
+[1:v]fps=$FPS,scale=${ICON_W}:-1:flags=lanczos,format=rgba,
+fade=t=in:st=0:d=${ICON_FADE}:alpha=1[gif];
+
+[vsub][gif]overlay=
+  x=W-w-${ICON_MARGIN}:
+  y=H-h-${ICON_MARGIN}:
+  enable='between(t,(T-$ICON_DUR),T)'
+[vout]
+"@
+} else {
+  # No icon: pass video through
+  $IconFilter = "[vsub]null[vout];"
+}
+
 # Source crop (L/R)
-$SrcCropExpr = "crop=w=iw-($SRC_CROP_L+$SRC_CROP_R):h=ih:x=$SRC_CROP_L:y=0"
+$SrcCropExpr = "crop=w=iw-($SRC_CROP_L+$SRC_CROP_R):h=ih:x=${SRC_CROP_L}:y=0"
 
 # Layout filter
 if ($LAYOUT_MODE -eq "FIT") {
   if ($FIT_BG_MODE -eq "blur") {
     $VideoLayout = @"
-[v0]$SrcCropExpr,fps=$FPS,scale=$OUT_W:$OUT_H:force_original_aspect_ratio=increase,crop=$OUT_W:$OUT_H,gblur=sigma=30[bg];
-[v0]$SrcCropExpr,fps=$FPS,scale=$OUT_W:$OUT_H:force_original_aspect_ratio=decrease[fg];
+[v0]$SrcCropExpr,fps=$FPS,scale=${OUT_W}:${OUT_H}:force_original_aspect_ratio=increase,crop=${OUT_W}:${OUT_H},gblur=sigma=30[bg];
+[v0]$SrcCropExpr,fps=$FPS,scale=${OUT_W}:${OUT_H}:force_original_aspect_ratio=decrease[fg];
 [bg][fg]overlay=(W-w)/2:(H-h)/2[vlaid];
 "@
   } else {
     $VideoLayout = @"
-[v0]$SrcCropExpr,fps=$FPS,scale=$OUT_W:$OUT_H:force_original_aspect_ratio=decrease,
-pad=$OUT_W:$OUT_H:(ow-iw)/2:(oh-ih)/2:color=black[vlaid];
+[v0]$SrcCropExpr,fps=$FPS,scale=${OUT_W}:${OUT_H}:force_original_aspect_ratio=decrease,
+pad=${OUT_W}:${OUT_H}:(ow-iw)/2:(oh-ih)/2:color=black[vlaid];
 "@
   }
 } else {
   $VideoLayout = @"
 [v0]$SrcCropExpr,fps=$FPS,
-scale=$OUT_W:$OUT_H:force_original_aspect_ratio=increase,
-crop=$OUT_W:$OUT_H[vlaid];
+scale=${OUT_W}:${OUT_H}:force_original_aspect_ratio=increase,
+crop=${OUT_W}:${OUT_H}[vlaid];
 "@
 }
 
@@ -153,41 +196,61 @@ crop=$OUT_W:$OUT_H[vlaid];
 $FilterFile = Join-Path $env:TEMP ("ff_filters_{0}.txt" -f ([System.Guid]::NewGuid().ToString("N")))
 
 try {
-  @"
+  $FilterText = @"
 [0:v]format=yuv420p[v0];
 
 $VideoLayout
 
 [vlaid]
-drawbox=x=0:y=0:w=iw:h=$TOP_BAR_H:color=black@1:t=fill,
+drawbox=x=0:y=0:w=iw:h=${TOP_BAR_H}:color=black@1:t=fill,
 drawtext=fontfile='$FontEsc':text='$TitleEsc':
   x=(w-text_w)/2:y=$TOP_BAR_H/2-text_h/2:
-  fontsize=$TITLE_SIZE:fontcolor=white:
+  fontsize=${TITLE_SIZE}:fontcolor=white:
   borderw=2:bordercolor=black@0.6
 [vtitle];
 
 $SubsFilter
 
-[1:v]fps=$FPS,scale=$ICON_W:-1:flags=lanczos,format=rgba,
-fade=t=in:st=0:d=$ICON_FADE:alpha=1[gif];
+$IconFilter
+"@
 
-[vsub][gif]overlay=
-  x=W-w-$ICON_MARGIN:
-  y=H-h-$ICON_MARGIN:
-  enable='between(t,(T-$ICON_DUR),T)'
-[vout]
-"@ | Set-Content -LiteralPath $FilterFile -Encoding UTF8
+  # Write UTF-8 WITHOUT BOM. BOM at the beginning may break ffmpeg filter parsing.
+  [System.IO.File]::WriteAllText(
+    $FilterFile,
+    $FilterText,
+    (New-Object System.Text.UTF8Encoding($false))
+  )
+
+  if (-not (Test-Path -LiteralPath $DataOutDirResolved)) {
+    New-Item -ItemType Directory -Force -Path $DataOutDirResolved | Out-Null
+  }
+
+  $FfmpegArgs = @(
+    '-ss', $T1,
+    '-to', $T2,
+    '-i', $INPUT
+  )
+
+  if ($HasIcon) {
+    $FfmpegArgs += @('-ignore_loop', '0', '-i', $IconEsc)
+  }
+
+  $FfmpegArgs += @(
+    '-/filter_complex', $FilterFile,
+    '-map', '[vout]',
+    '-map', '0:a?',
+    '-c:v', 'libx264',
+    '-crf', $CRF,
+    '-preset', $PRESET,
+    '-pix_fmt', 'yuv420p',
+    '-c:a', 'aac',
+    '-b:a', $AUDIO_BITRATE,
+    '-movflags', '+faststart',
+    $OUT
+  )
 
   # Run ffmpeg
-  & $FFMPEG `
-    -ss $T1 -to $T2 -i $INPUT `
-    -ignore_loop 0 -i $IconEsc `
-    -filter_complex_script $FilterFile `
-    -map "[vout]" -map "0:a?" `
-    -c:v libx264 -crf $CRF -preset $PRESET -pix_fmt yuv420p `
-    -c:a aac -b:a $AUDIO_BITRATE `
-    -movflags +faststart `
-    $OUT
+  & $FFMPEG @FfmpegArgs
 }
 finally {
   if (Test-Path -LiteralPath $FilterFile) { Remove-Item -LiteralPath $FilterFile -Force }
