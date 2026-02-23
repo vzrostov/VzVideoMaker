@@ -4,7 +4,7 @@ A small Windows PowerShell + FFmpeg template to cut a fragment from a long video
 
 - optional top title bar + centered title text
 - optional subtitles overlay (.ass preferred, .srt supported)
-- optional GIF icon overlay at the end of the clip
+- optional GIF icon overlay at the end of the clip (can be disabled)
 
 Use **JSON presets** to run the script.
 
@@ -12,6 +12,8 @@ Use **JSON presets** to run the script.
 
 - Windows PowerShell 5.1
 - FFmpeg available in `PATH` (or update `$FFMPEG` in `make-video.ps1`)
+
+FFmpeg 8+ may print a deprecation warning if legacy filter script flags are used. This project uses `-/filter_complex` for filter script files.
 
 ## Quick start
 
@@ -53,7 +55,7 @@ A preset is a JSON object with keys matching `make-video.ps1` parameters.
 - `FontFile` (string)
 - `TitleSize` (int)
 - `SubForceStyle` (string)
-- `IconFile` (string)
+- `IconFile` (string) — set to `""` to disable icon overlay
 
 Notes:
 - If a preset contains **relative paths**, they are resolved under:

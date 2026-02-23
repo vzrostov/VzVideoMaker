@@ -130,7 +130,12 @@ function Escape-ForFfmpegText([string]$s) {
 
 function Escape-ForFfmpegPath([string]$p) {
   # In filtergraph it's safer to use / instead of \
-  return ($p -replace "\\", "/")
+  # Also escape the drive letter colon (C:) as C\: because ':' separates options in ffmpeg filter args.
+  $p = ($p -replace "\\", "/")
+  # Escape the drive letter colon (C:) as C\: because ':' separates options in ffmpeg filter args.
+  # We want exactly ONE backslash in the final string: C\:/Windows/Fonts/...
+  $p = ($p -replace '^([A-Za-z]):', '$1\:')
+  return $p
 }
 
 $TitleEsc = Escape-ForFfmpegText $TITLE
@@ -144,6 +149,22 @@ if ($HasSubs) {
   $SubsFilter = "[vtitle]subtitles='${SubsEsc}:force_style=${SUB_FORCE_STYLE}'[vsub];"
 } else {
   $SubsFilter = "[vtitle]null[vsub];"
+}
+
+if ($HasIcon) {
+  $IconFilter = @"
+[1:v]fps=$FPS,scale=${ICON_W}:-1:flags=lanczos,format=rgba,
+fade=t=in:st=0:d=${ICON_FADE}:alpha=1[gif];
+
+[vsub][gif]overlay=
+  x=W-w-${ICON_MARGIN}:
+  y=H-h-${ICON_MARGIN}:
+  enable='between(t,(T-$ICON_DUR),T)'
+[vout]
+"@
+} else {
+  # No icon: pass video through
+  $IconFilter = "[vsub]null[vout];"
 }
 
 # Source crop (L/R)
@@ -175,7 +196,7 @@ crop=${OUT_W}:${OUT_H}[vlaid];
 $FilterFile = Join-Path $env:TEMP ("ff_filters_{0}.txt" -f ([System.Guid]::NewGuid().ToString("N")))
 
 try {
-  @"
+  $FilterText = @"
 [0:v]format=yuv420p[v0];
 
 $VideoLayout
@@ -190,34 +211,46 @@ drawtext=fontfile='$FontEsc':text='$TitleEsc':
 
 $SubsFilter
 
-[1:v]fps=$FPS,scale=${ICON_W}:-1:flags=lanczos,format=rgba,
-fade=t=in:st=0:d=${ICON_FADE}:alpha=1[gif];
+$IconFilter
+"@
 
-[vsub][gif]overlay=
-  x=W-w-${ICON_MARGIN}:
-  y=H-h-${ICON_MARGIN}:
-  enable='between(t,(T-$ICON_DUR),T)'
-[vout]
-"@ | Set-Content -LiteralPath $FilterFile -Encoding UTF8
+  # Write UTF-8 WITHOUT BOM. BOM at the beginning may break ffmpeg filter parsing.
+  [System.IO.File]::WriteAllText(
+    $FilterFile,
+    $FilterText,
+    (New-Object System.Text.UTF8Encoding($false))
+  )
 
   if (-not (Test-Path -LiteralPath $DataOutDirResolved)) {
     New-Item -ItemType Directory -Force -Path $DataOutDirResolved | Out-Null
   }
 
-  if (-not $HasIcon) {
-    throw "Icon file not found. Place it under Data\\In or set -IconFile: $ICON"
+  $FfmpegArgs = @(
+    '-ss', $T1,
+    '-to', $T2,
+    '-i', $INPUT
+  )
+
+  if ($HasIcon) {
+    $FfmpegArgs += @('-ignore_loop', '0', '-i', $IconEsc)
   }
 
-  # Run ffmpeg
-  & $FFMPEG `
-    -ss $T1 -to $T2 -i $INPUT `
-    -ignore_loop 0 -i $IconEsc `
-    -filter_complex_script $FilterFile `
-    -map "[vout]" -map "0:a?" `
-    -c:v libx264 -crf $CRF -preset $PRESET -pix_fmt yuv420p `
-    -c:a aac -b:a $AUDIO_BITRATE `
-    -movflags +faststart `
+  $FfmpegArgs += @(
+    '-/filter_complex', $FilterFile,
+    '-map', '[vout]',
+    '-map', '0:a?',
+    '-c:v', 'libx264',
+    '-crf', $CRF,
+    '-preset', $PRESET,
+    '-pix_fmt', 'yuv420p',
+    '-c:a', 'aac',
+    '-b:a', $AUDIO_BITRATE,
+    '-movflags', '+faststart',
     $OUT
+  )
+
+  # Run ffmpeg
+  & $FFMPEG @FfmpegArgs
 }
 finally {
   if (Test-Path -LiteralPath $FilterFile) { Remove-Item -LiteralPath $FilterFile -Force }
