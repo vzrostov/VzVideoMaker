@@ -1,6 +1,6 @@
 {
-  "InFile": "big_video.mp4",
-  "OutFile": "tiktok_clip_no_subs.mp4",
+  "InFile": "Data/In/big_video.avi",
+  "OutFile": "Data/Out/tiktok_clip_no_subs.mp4",
   "T1": "00:12:34.500",
   "T2": "00:13:10.000",
   "Title": "MY TITLE",

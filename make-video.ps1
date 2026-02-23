@@ -45,12 +45,15 @@ param(
   [Parameter()]
   [string]$SubForceStyle = "Alignment=2,Fontsize=52,Outline=3,Shadow=0,MarginV=70",
 
-  # Data directories (relative to the script directory by default)
+
+  # Base directories for resolving relative paths.
+  # Default is the current working directory.
+  # Note: run-preset.ps1 sets the working directory to the script folder.
   [Parameter()]
-  [string]$DataInDir = "Data\\In",
+  [string]$DataInDir = ".",
 
   [Parameter()]
-  [string]$DataOutDir = "Data\\Out",
+  [string]$DataOutDir = ".",
 
   # Icon file name/path (resolved under Data\In if relative)
   [Parameter()]
@@ -58,13 +61,15 @@ param(
 )
 
 Set-StrictMode -Version Latest
+
 $ErrorActionPreference = "Stop"
 
 # ===================== SETTINGS (edit here) =====================
 
-# Data directories
-$DataInDirResolved = if ([System.IO.Path]::IsPathRooted($DataInDir)) { $DataInDir } else { (Join-Path $PSScriptRoot $DataInDir) }
-$DataOutDirResolved = if ([System.IO.Path]::IsPathRooted($DataOutDir)) { $DataOutDir } else { (Join-Path $PSScriptRoot $DataOutDir) }
+# Base directories (relative to the *current working directory*)
+$Cwd = (Get-Location).Path
+$DataInDirResolved = if ([System.IO.Path]::IsPathRooted($DataInDir)) { $DataInDir } else { (Join-Path $Cwd $DataInDir) }
+$DataOutDirResolved = if ([System.IO.Path]::IsPathRooted($DataOutDir)) { $DataOutDir } else { (Join-Path $Cwd $DataOutDir) }
 
 function Resolve-UnderDir([string]$path, [string]$baseDir) {
   if ([string]::IsNullOrWhiteSpace($path)) { return $path }
@@ -221,8 +226,10 @@ $IconFilter
     (New-Object System.Text.UTF8Encoding($false))
   )
 
-  if (-not (Test-Path -LiteralPath $DataOutDirResolved)) {
-    New-Item -ItemType Directory -Force -Path $DataOutDirResolved | Out-Null
+  # Ensure output directory exists (supports OutFile like "Data/Out/clip.mp4")
+  $OutDir = Split-Path -Parent $OUT
+  if (-not [string]::IsNullOrWhiteSpace($OutDir) -and -not (Test-Path -LiteralPath $OutDir)) {
+    New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
   }
 
   $FfmpegArgs = @(
@@ -230,6 +237,8 @@ $IconFilter
     '-to', $T2,
     '-i', $INPUT
   )
+
+
 
   if ($HasIcon) {
     $FfmpegArgs += @('-ignore_loop', '0', '-i', $IconEsc)
