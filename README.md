@@ -15,11 +15,20 @@ Use **JSON presets** to run the script.
 
 ## Quick start
 
-1. Create/edit a preset JSON file (see `presetsTest/` examples).
-2. Run:
+1. Put your input files into:
+   - `Data/In` (input video, subtitles, icon)
+   - `Data/Out` (output will be created here)
+2. Create/edit a preset JSON file (see `presetsTest/` examples).
+3. Run:
 
 ```powershell
 powershell.exe -NoProfile -File .\run-preset.ps1 -Preset .\presetsTest\example-no-subs.json
+```
+
+If you want the console window to stay open (e.g. when starting by double-click), use:
+
+```powershell
+powershell.exe -NoProfile -File .\run-preset-pause.ps1 -Preset .\presetsTest\example-no-subs.json
 ```
 
 ## Preset format (JSON)
@@ -44,15 +53,19 @@ A preset is a JSON object with keys matching `make-video.ps1` parameters.
 - `FontFile` (string)
 - `TitleSize` (int)
 - `SubForceStyle` (string)
+- `IconFile` (string)
 
 Notes:
-- If a preset contains **relative paths**, they are resolved **relative to the preset file directory**.
+- If a preset contains **relative paths**, they are resolved under:
+  - `Data/In` for `InFile`, `Subs`, `FontFile`, `IconFile`
+  - `Data/Out` for `OutFile`
 - In JSON on Windows, prefer using forward slashes in paths (e.g. `C:/Windows/Fonts/arialbd.ttf`) to avoid escaping backslashes.
 
 ## Project files
 
 - `make-video.ps1` — main FFmpeg pipeline script
 - `run-preset.ps1` — reads a JSON preset and runs `make-video.ps1` with those parameters
+- `run-preset-pause.ps1` — same as `run-preset.ps1`, but waits for a key press at the end
 - `presetsTest/` — example presets
 
 ## License

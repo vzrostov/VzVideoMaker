@@ -28,5 +28,9 @@
 Thumbs.db
 .vscode/
 
+# Presets / local data (do not commit)
+presets/
+Data/
+
 # PowerShell
 *.ps1.bak
