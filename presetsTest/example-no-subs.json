@@ -1,0 +1,16 @@
+{
+  "InFile": "big_video.mp4",
+  "OutFile": "tiktok_clip_no_subs.mp4",
+  "T1": "00:12:34.500",
+  "T2": "00:13:10.000",
+  "Title": "MY TITLE",
+  "Subs": "",
+
+  "LayoutMode": "CROP",
+  "SrcCropL": 0,
+  "SrcCropR": 0,
+
+  "TopBarH": 220,
+  "FontFile": "C:/Windows/Fonts/arialbd.ttf",
+  "TitleSize": 64
+}

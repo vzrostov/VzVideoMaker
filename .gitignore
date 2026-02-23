@@ -1,0 +1,32 @@
+# Video/audio outputs and media sources
+*.mp4
+*.mov
+*.mkv
+*.webm
+*.avi
+*.mp3
+*.m4a
+*.wav
+
+# Subtitles (often generated locally)
+*.srt
+*.ass
+
+# Images/icons (keep only if you intentionally want them in the repo)
+*.gif
+*.png
+*.jpg
+*.jpeg
+*.webp
+
+# Logs / temporary files
+*.log
+*.tmp
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+
+# PowerShell
+*.ps1.bak

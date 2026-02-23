@@ -1,0 +1,18 @@
+{
+  "InFile": "big_video.mp4",
+  "OutFile": "tiktok_clip_with_subs.mp4",
+  "T1": "00:02:10.000",
+  "T2": "00:02:45.000",
+  "Title": "Clip with subtitles",
+  "Subs": "subs_for_clip.ass",
+
+  "LayoutMode": "CROP",
+  "SrcCropL": 0,
+  "SrcCropR": 0,
+
+  "TopBarH": 220,
+  "FontFile": "C:/Windows/Fonts/arialbd.ttf",
+  "TitleSize": 64,
+
+  "SubForceStyle": "Alignment=2,Fontsize=52,Outline=3,Shadow=0,MarginV=70"
+}
