@@ -230,15 +230,17 @@ $IconFilter
   $OutDir = Split-Path -Parent $OUT
   if (-not [string]::IsNullOrWhiteSpace($OutDir) -and -not (Test-Path -LiteralPath $OutDir)) {
     New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
-  }
+    }
 
   $FfmpegArgs = @(
+    # Input-side error tolerance (helps with slightly corrupted AC3/VOB/etc. streams)
+    '-fflags', '+discardcorrupt',
+    '-err_detect', 'ignore_err',
+
     '-ss', $T1,
     '-to', $T2,
     '-i', $INPUT
   )
-
-
 
   if ($HasIcon) {
     $FfmpegArgs += @('-ignore_loop', '0', '-i', $IconEsc)
@@ -254,6 +256,13 @@ $IconFilter
     '-pix_fmt', 'yuv420p',
     '-c:a', 'aac',
     '-b:a', $AUDIO_BITRATE,
+    '-ac', '2',
+    '-ar', '48000',
+
+    # Audio timestamp normalization for iOS Photos / TikTok preview compatibility
+    '-af', 'aresample=async=1:first_pts=0',
+    '-avoid_negative_ts', 'make_zero',
+
     '-movflags', '+faststart',
     $OUT
   )
