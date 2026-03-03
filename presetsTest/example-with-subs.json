@@ -11,7 +11,14 @@
   "SrcCropR": 120,
 
   "TopBarH": 220,
-  "FontFile": "C:/Windows/Fonts/arialbd.ttf",
+  "TopBarColor": "0xD9D9D9",
+  "TopBarAlpha": 1.0,
+
+  "TitleColor": "0x6fa0ed",
+  "TitleOutlineW": 2,
+  "TitleOutlineColor": "black",
+  "TitleOutlineAlpha": 1.0,
+  "FontFile": "C:/Windows/Fonts/arial.ttf",
   "TitleSize": 96,
 
   "SubForceStyle": "Alignment=2,Fontsize=52,Outline=3,Shadow=0,MarginV=70"

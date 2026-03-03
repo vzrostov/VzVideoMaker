@@ -36,8 +36,31 @@ param(
   [Parameter()]
   [int]$TopBarH = 220,
 
+  # Top bar styling (drawbox)
+  [Parameter()]
+  [string]$TopBarColor = "0xD9D9D9",
+
+  [Parameter()]
+  [ValidateRange(0.0, 1.0)]
+  [double]$TopBarAlpha = 1.0,
+
+  # Title styling (drawtext)
+  [Parameter()]
+  [string]$TitleColor = "blue",
+
+  [Parameter()]
+  [int]$TitleOutlineW = 2,
+
+  [Parameter()]
+  [string]$TitleOutlineColor = "black",
+
+  [Parameter()]
+  [ValidateRange(0.0, 1.0)]
+  [double]$TitleOutlineAlpha = 1.0,
+
   [Parameter()]
   [string]$FontFile = "C:\Windows\Fonts\arialbd.ttf",
+
 
   [Parameter()]
   [int]$TitleSize = 64,
@@ -98,10 +121,17 @@ $SRC_CROP_L = $SrcCropL
 $SRC_CROP_R = $SrcCropR
 
 # Title
-$TITLE        = $Title
-$TOP_BAR_H    = $TopBarH
-$FONTFILE     = Resolve-UnderDir $FontFile $DataInDirResolved
-$TITLE_SIZE   = $TitleSize
+$TITLE              = $Title
+$TOP_BAR_H          = $TopBarH
+$TOP_BAR_COLOR      = $TopBarColor
+$TOP_BAR_ALPHA      = $TopBarAlpha
+$TITLE_COLOR        = $TitleColor
+$TITLE_OUTLINE_W    = $TitleOutlineW
+$TITLE_OUTLINE_COLOR= $TitleOutlineColor
+$TITLE_OUTLINE_ALPHA= $TitleOutlineAlpha
+$FONTFILE           = Resolve-UnderDir $FontFile $DataInDirResolved
+$TITLE_SIZE         = $TitleSize
+
 
 # Subtitles (.ass recommended, .srt ok)
 $SUBS = Resolve-UnderDir $Subs $DataInDirResolved
@@ -207,11 +237,12 @@ try {
 $VideoLayout
 
 [vlaid]
-drawbox=x=0:y=0:w=iw:h=${TOP_BAR_H}:color=black@1:t=fill,
+drawbox=x=0:y=0:w=iw:h=${TOP_BAR_H}:color=${TOP_BAR_COLOR}@${TOP_BAR_ALPHA}:t=fill,
 drawtext=fontfile='$FontEsc':text='$TitleEsc':
   x=(w-text_w)/2:y=$TOP_BAR_H/2-text_h/2:
-  fontsize=${TITLE_SIZE}:fontcolor=white:
-  borderw=2:bordercolor=black@0.6
+  fontsize=${TITLE_SIZE}:fontcolor=${TITLE_COLOR}:
+  borderw=${TITLE_OUTLINE_W}:bordercolor=${TITLE_OUTLINE_COLOR}@${TITLE_OUTLINE_ALPHA}
+
 [vtitle];
 
 $SubsFilter

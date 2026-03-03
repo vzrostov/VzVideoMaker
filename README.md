@@ -52,10 +52,17 @@ A preset is a JSON object with keys matching `make-video.ps1` parameters.
 - `SrcCropL` (int)
 - `SrcCropR` (int)
 - `TopBarH` (int)
+- `TopBarColor` (string) — e.g. `0xD9D9D9`
+- `TopBarAlpha` (number) — 0..1
+- `TitleColor` (string) — e.g. `blue`
+- `TitleOutlineW` (int) — outline width in px
+- `TitleOutlineColor` (string)
+- `TitleOutlineAlpha` (number) — 0..1
 - `FontFile` (string)
 - `TitleSize` (int)
 - `SubForceStyle` (string)
 - `IconFile` (string) — set to `""` to disable icon overlay
+
 
 Notes:
 - If a preset contains **relative paths**, they are resolved under the current working directory.
