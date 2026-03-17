@@ -1,14 +1,14 @@
 {
   "InFile": "Data/In/big_video.avi",
   "OutFile": "Data/Out/tiktok_clip_with_subs.mp4",
-  "T1": "00:02:10.000",
-  "T2": "00:02:16.000",
+  "T1": "00:02:09.200",
+  "T2": "00:02:31.000",
   "Title": "Clip with subtitles",
   "Subs": "presetsTest/subs_for_clip.ass",
 
-  "LayoutMode": "FIT",
+  "LayoutMode": "CROP",
   "SrcCropL": 0,
-  "SrcCropR": 120,
+  "SrcCropR": 0,
 
   "TopBarH": 220,
   "TopBarColor": "0xD9D9D9",

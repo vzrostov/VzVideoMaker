@@ -232,7 +232,8 @@ $FilterFile = Join-Path $env:TEMP ("ff_filters_{0}.txt" -f ([System.Guid]::NewGu
 
 try {
   $FilterText = @"
-[0:v]format=yuv420p[v0];
+[0:v]setpts=PTS-STARTPTS,format=yuv420p[v0];
+
 
 $VideoLayout
 
@@ -263,22 +264,26 @@ $IconFilter
     New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
     }
 
-  $FfmpegArgs = @(
+    $FfmpegArgs = @(
     # Input-side error tolerance (helps with slightly corrupted AC3/VOB/etc. streams)
     '-fflags', '+discardcorrupt',
     '-err_detect', 'ignore_err',
 
-    '-ss', $T1,
-    '-to', $T2,
     '-i', $INPUT
   )
+
 
   if ($HasIcon) {
     $FfmpegArgs += @('-ignore_loop', '0', '-i', $IconEsc)
   }
 
-  $FfmpegArgs += @(
-    '-/filter_complex', $FilterFile,
+    $FfmpegArgs += @(
+    # Accurate trimming: keep -ss/-to AFTER inputs.
+    # This avoids MP3 decoder errors like "Header missing" that can happen with input seeking.
+    '-ss', $T1,
+    '-to', $T2,
+
+    '-filter_complex_script', $FilterFile,
     '-map', '[vout]',
     '-map', '0:a?',
     '-c:v', 'libx264',
@@ -297,6 +302,7 @@ $IconFilter
     '-movflags', '+faststart',
     $OUT
   )
+
 
   # Run ffmpeg
   & $FFMPEG @FfmpegArgs
